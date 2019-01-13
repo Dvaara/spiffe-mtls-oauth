@@ -1,4 +1,4 @@
-package org.dvaara.wso2.oauth2.token.handler.clientauth.mutualtls.utils;
+package org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.utils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -6,9 +6,9 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 
 /**
- * Util class for OAuth 2.0 client authentication using Mutual TLS based on SPIFFE.
+ * Util class for OAuth 2.0 client authentication using Mutual TLS.
  */
-public class SpiffeMTLSUtil {
+public class MutualTLSUtil {
 
     /**
      * Attribute name for reading client certificate in the request.
