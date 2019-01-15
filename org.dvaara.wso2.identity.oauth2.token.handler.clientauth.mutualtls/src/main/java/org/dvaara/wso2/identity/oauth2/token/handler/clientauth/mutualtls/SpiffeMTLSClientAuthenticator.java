@@ -1,26 +1,9 @@
-/*
- * Copyright (c) 2018, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
- *
- * WSO2 Inc. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
-
 package org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.identity.oauth.dcr.bean.Application;
 import org.wso2.carbon.identity.oauth.dcr.bean.ApplicationRegistrationRequest;
 import org.wso2.carbon.identity.oauth.dcr.exception.DCRMException;
 import org.wso2.carbon.identity.oauth.dcr.service.DCRMService;
@@ -28,13 +11,14 @@ import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
 import org.wso2.carbon.identity.oauth2.client.authentication.AbstractOAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 
-import javax.servlet.http.HttpServletRequest;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
 
 import static java.lang.String.format;
 import static org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.utils.MutualTLSUtil.JAVAX_SERVLET_REQUEST_CERTIFICATE;
@@ -66,27 +50,16 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
             log.debug("Authenticating client with public certificate.");
         }
 
-        X509Certificate requestCert;
-        Object certObject = request.getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE);
-        if (certObject instanceof X509Certificate[]) {
-            X509Certificate[] cert = (X509Certificate[]) certObject;
-            requestCert = cert[0];
-        } else if (certObject instanceof X509Certificate) {
-            requestCert = (X509Certificate) certObject;
-        } else {
-            if (log.isDebugEnabled()) {
-                log.debug("Could not find client certificate in required format for client: " +
-                        oAuthClientAuthnContext.getClientId());
+        String clientID = getClientId(request, bodyParams, oAuthClientAuthnContext);
+        try {
+            Application application = getOAuth2DCRMService().getApplication(clientID);
+            if (application == null) {
+                registerClient(request, bodyParams, oAuthClientAuthnContext);
             }
-//            return false;
+        } catch (DCRMException e) {
+            log.error(format("Error in retrieving application with clientID: %s. Create a new one.", clientID));
+            registerClient(request, bodyParams, oAuthClientAuthnContext);
         }
-
-        if (log.isDebugEnabled()) {
-//            logCertDetails(requestCert);
-        }
-
-        getClientId(request, bodyParams, oAuthClientAuthnContext);
-        registerClient(request, bodyParams, oAuthClientAuthnContext);
         return true;
 
     }
@@ -105,15 +78,18 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
 
     }
 
-    private void getClientID(X509Certificate requestCert) throws OAuthClientAuthnException {
+    private String getClientID(X509Certificate requestCert) throws OAuthClientAuthnException {
 
-        try {
-            Collection<List<?>> sanNames = requestCert.getSubjectAlternativeNames();
-            log.info(sanNames.stream().findFirst().get().get(0).toString());
-        } catch (CertificateParsingException e) {
-            log.error("Error occurred in parsing the certificate.");
-            throw new OAuthClientAuthnException("Error occurred in parsing the certificate.", e.getMessage());
-        }
+        List<String> sanNames;
+        //if this is getting called requestCert can't ever be null.
+//        try {
+        sanNames = getSubjectAlternativeNames(requestCert);
+        sanNames.forEach(name -> log.info(format("SAN name in cert: %s", name)));
+
+        return sanNames.get(0).replace(".", "")
+                .replace("/", "")
+                .replace(":", "")
+                .replace("-", "_");
     }
 
     /**
@@ -130,24 +106,36 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
 
         if (validCertExistsAsAttribute(request)) {
             if (log.isDebugEnabled()) {
-                log.debug("Client ID exists in request body parameters and a valid certificate found in request " +
-                        "attributes. Hence returning true.");
+                log.debug("A valid certificate found in request attributes. Hence returning true.");
             }
             return true;
         } else {
             if (log.isDebugEnabled()) {
                 log.debug("Mutual TLS authenticator cannot handle this request. A valid certificate not found in request attributes.");
             }
-            return true;
+            return false;
         }
     }
 
     @Override
     public String getClientId(HttpServletRequest httpServletRequest, Map<String, List> map, OAuthClientAuthnContext oAuthClientAuthnContext) throws OAuthClientAuthnException {
 
-        String clientID = ("spiffe://example.org" + System.currentTimeMillis()).replace("://","_").
-                replace(".","_")
-                .substring(0,28);
+        //At canAuthenticate it's validated to have the cert. Hence proceeding to process it.
+        X509Certificate requestCert = null;
+        Object certObject = httpServletRequest.getAttribute(JAVAX_SERVLET_REQUEST_CERTIFICATE);
+        if (certObject instanceof X509Certificate[]) {
+            X509Certificate[] cert = (X509Certificate[]) certObject;
+            requestCert = cert[0];
+        } else if (certObject instanceof X509Certificate) {
+            requestCert = (X509Certificate) certObject;
+        } else {
+            if (log.isDebugEnabled()) {
+                log.debug("Could not find client certificate in required format for client.");
+            }
+            throw new OAuthClientAuthnException("Error in building clientID from cert.", "BAD REQUEST");
+        }
+        logCertDetails(requestCert);
+        String clientID = getClientID(requestCert);
         oAuthClientAuthnContext.setClientId(clientID);
         return clientID;
     }
@@ -171,10 +159,11 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
     }
 
     private void registerClient(HttpServletRequest httpServletRequest, Map<String, List> map, OAuthClientAuthnContext oAuthClientAuthnContext) {
+
         ApplicationRegistrationRequest applicationRegistrationRequest = new ApplicationRegistrationRequest();
         applicationRegistrationRequest.setClientName(oAuthClientAuthnContext.getClientId());
         applicationRegistrationRequest.setConsumerKey(oAuthClientAuthnContext.getClientId());
-        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin");
+        PrivilegedCarbonContext.getThreadLocalCarbonContext().setUsername("admin"); //ToDO should use a less privileged user.
         ArrayList<String> grants = new ArrayList<>();
         grants.add("client_credentials");
         applicationRegistrationRequest.setGrantTypes(grants);
@@ -192,5 +181,29 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
 
         return (DCRMService) PrivilegedCarbonContext.getThreadLocalCarbonContext()
                 .getOSGiService(DCRMService.class, null);
+    }
+
+    public static List<String> getSubjectAlternativeNames(X509Certificate certificate) {
+
+        List<String> identities = new ArrayList<String>();
+        try {
+            Collection<List<?>> altNames = certificate.getSubjectAlternativeNames();
+            if (altNames == null)
+                return Collections.emptyList();
+            for (List item : altNames) {
+                Integer type = (Integer) item.get(0);
+                //https://docs.oracle.com/javase/8/docs/api/java/security/cert/X509Certificate.html#getSubjectAlternativeNames--
+                // type 6 - uniformResourceIdentifier is expected in SPIFFE cert.
+                if (type == 6) {
+                    identities.add((String) item.get(1));
+
+                } else {
+                    log.warn("SubjectAltName of invalid type found: " + certificate);
+                }
+            }
+        } catch (CertificateParsingException e) {
+            log.error("Error parsing SubjectAltName in certificate: " + certificate + "\r\nerror:" + e.getLocalizedMessage(), e);
+        }
+        return identities;
     }
 }
