@@ -9,9 +9,11 @@ import org.apache.commons.logging.LogFactory;
 public class OPAScopeUtils {
 
     private static Log log = LogFactory.getLog(OPAScopeUtils.class);
-    public static final String OPAServerURL = "OPA.Server.URL";
-    public static final String OPAServerPassword = "OPA.Server.Password";
-    public static final String OPAServerUsername = "OPA.Server.Username";
-
+    public static final String OPA_SERVER_URL = "OPA.Server.URL";
+    public static final String OPA_SERVER_PASSWORD = "OPA.Server.Password";
+    public static final String OPA_SERVER_USERNAME = "OPA.Server.Username";
+    public static final String RESOURCE = "Resource";
+    public static final String APP_OWNER = "APP_OWNER";
+    public static final String CLIENT_ID = "CLIENT_ID";
 
 }

@@ -3,7 +3,6 @@ package org.dvaara.wso2.identity.oauth2.scope.handler;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.fluent.Form;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.entity.ContentType;
 import org.apache.http.util.EntityUtils;
@@ -34,12 +33,12 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
         Set<String> clientRequestedScopes = Arrays.stream(tokReqMsgCtx.getScope()).collect(Collectors.toSet());
-        if(log.isDebugEnabled()){
+        if (log.isDebugEnabled()) {
             clientRequestedScopes.forEach((name) -> log.debug(format("Client requested scope: %s", name)));
         }
 
         Set<String> allowedScopes = getAllowedOPAScopes(tokReqMsgCtx);
-        if(log.isDebugEnabled()){
+        if (log.isDebugEnabled()) {
             clientRequestedScopes.forEach((name) -> log.debug(format("OPA allowed scope: %s", name)));
         }
 
@@ -57,11 +56,11 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().getoAuthClientAuthnContext().isAuthenticated();
         tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();  //user-agent
 
-
         return Collections.emptySet();
     }
 
     private String callOPA(String query) throws IOException {
+
         HttpResponse response =
                 Request.Post(getOPAServerURL())
                         .bodyString(query, ContentType.APPLICATION_JSON)
@@ -77,14 +76,17 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
     }
 
     private String getOPAServerURL() {
-        return getProperties().get(OPAScopeUtils.OPAServerURL);
+
+        return getProperties().get(OPAScopeUtils.OPA_SERVER_URL);
     }
 
     private String getOPAServerUsername() {
-        return getProperties().get(OPAScopeUtils.OPAServerUsername);
+
+        return getProperties().get(OPAScopeUtils.OPA_SERVER_USERNAME);
     }
 
     private char[] getOPAServerPassword() {
-        return getProperties().get(OPAScopeUtils.OPAServerPassword).toCharArray();
+
+        return getProperties().get(OPAScopeUtils.OPA_SERVER_PASSWORD).toCharArray();
     }
 }
