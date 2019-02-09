@@ -13,7 +13,8 @@ public class OPAScopeUtils {
     public static final String OPA_SERVER_PASSWORD = "OPA.Server.Password";
     public static final String OPA_SERVER_USERNAME = "OPA.Server.Username";
     public static final String RESOURCE = "Resource";
-    public static final String APP_OWNER = "APP_OWNER";
-    public static final String CLIENT_ID = "CLIENT_ID";
+    public static final String APP_OWNER = "AppOwner";
+    public static final String CLIENT_ID = "ClientID";
+    public static final String SPIFFE_ID = "spiffe-id";
 
 }

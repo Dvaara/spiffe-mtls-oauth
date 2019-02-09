@@ -27,6 +27,7 @@
     <modules>
         <!--this should be released after the required supplementary features are merged-->
         <module>org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls</module>
+        <module>org.dvaara.wso2.identity.oauth2.scope</module>
     </modules>
 
     <profiles>

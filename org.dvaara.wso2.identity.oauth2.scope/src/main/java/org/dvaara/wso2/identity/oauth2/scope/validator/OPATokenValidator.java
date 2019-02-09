@@ -10,6 +10,8 @@ import org.dvaara.wso2.identity.oauth2.scope.utils.OPAScopeUtils;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.bean.OAuthClientAuthnContext;
+import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnException;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationRequestDTO;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
@@ -18,19 +20,26 @@ import org.wso2.carbon.identity.oauth2.validators.OAuth2TokenValidationMessageCo
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.cert.CertificateParsingException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpServletRequest;
+
+import static java.lang.String.format;
 
 /**
  * Retrieve the decision from Open Policy Engine on whether the scopes attached to the token are
  * valid to access the resource under consideration.
  */
-public class OPAScopeValidator extends DefaultOAuth2TokenValidator {
+public class OPATokenValidator extends DefaultOAuth2TokenValidator {
 
-    private static Log log = LogFactory.getLog(OPAScopeValidator.class);
+    private static Log log = LogFactory.getLog(OPATokenValidator.class);
     private static final String ACCESS_TOKEN_DO = "AccessTokenDO";
     private static final String RESOURCE = "resource";
+    public static final String JAVAX_SERVLET_REQUEST_CERTIFICATE = "javax.servlet.request.X509Certificate";
     private static final String OPA_SERVER_URL = "";
 
     /**

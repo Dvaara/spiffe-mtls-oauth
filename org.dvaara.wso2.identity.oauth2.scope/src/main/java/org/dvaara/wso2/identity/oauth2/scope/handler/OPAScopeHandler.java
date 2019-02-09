@@ -8,6 +8,9 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.util.EntityUtils;
 import org.dvaara.wso2.identity.oauth2.scope.utils.OPAScopeUtils;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
+import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
+import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
+import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
 
@@ -52,9 +55,20 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
 
     private Set<String> getAllowedOPAScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
         //By the time this method is called, clientID is validated.
-        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getoAuthClientAuthnContext().getClientId();
-        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getoAuthClientAuthnContext().isAuthenticated();
-        tokReqMsgCtx.getOauth2AccessTokenReqDTO().getHttpRequestHeaders();  //user-agent
+        OAuth2AccessTokenReqDTO requestDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
+
+        if(!requestDTO.getoAuthClientAuthnContext().isAuthenticated()){
+            return Collections.emptySet(); //If not authenticated, no use in checking on scopes.
+        }
+
+        String clientID = requestDTO.getoAuthClientAuthnContext().getClientId();
+        HttpRequestHeader[] requestHeaders = requestDTO.getHttpRequestHeaders();  //user-agent
+        RequestParameter[] requestParams = requestDTO.getRequestParameters();
+
+        Arrays.stream(requestHeaders).forEach(requestHeader ->
+                System.out.println("Header:" + requestHeader.getName() +"+"+requestHeader.getValue()));
+        Arrays.stream(requestParams).forEach(requestParameter ->
+                System.out.println("Param:"+ requestParameter.getKey()+" Value"+ requestParameter.getValue()));
 
         return Collections.emptySet();
     }

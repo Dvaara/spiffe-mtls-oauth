@@ -4,7 +4,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class OPAScopeValidatorTest {
+public class OPATokenValidatorTest {
 
     @Test
     public void validateScope() throws Exception {

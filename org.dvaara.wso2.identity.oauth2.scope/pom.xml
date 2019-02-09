@@ -9,9 +9,9 @@
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
-    <artifactId>org.dvaara.wso2.identity.oauth2.scope.validator</artifactId>
-    <packaging>bundle</packaging>
-    <name>OAuth SPIFFE scope validator</name>
+    <artifactId>org.dvaara.wso2.identity.oauth2.scope</artifactId>
+    <packaging>jar</packaging>
+    <name>OAuth SPIFFE scope extensions</name>
     <url>http://wso2.org</url>
 
     <dependencies>
@@ -181,50 +181,50 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.artifactId}</Bundle-Name>
-                        <Private-Package>org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.internal
-                        </Private-Package>
-                        <Import-Package>
-                            javax.servlet.http;version="${javax.servlet.http.package.import.version.range}",
-                            org.apache.commons.lang;version="${apache.commons.lang.package.import.version.range}",
-                            org.apache.commons.logging;version="${apache.commons.logging.package.import.version.range}",
-                            org.apache.oltu.oauth2.common;version="${apache.oltu.oauth2.common.package.import.version.range}",
-                            org.osgi.framework;version="${osgi.framework.package.import.version.range}",
-                            org.osgi.service.component;version="${osgi.service.component.package.import.version.range}",
-                            org.wso2.carbon.identity.oauth.common;version="${identity.inbound.auth.oauth.imp.pkg.version}",
-                            org.wso2.carbon.identity.oauth.common.exception;version="${identity.inbound.auth.oauth.imp.pkg.version}",
-                            org.wso2.carbon.identity.oauth2;version="${identity.inbound.auth.oauth.imp.pkg.version}",
-                            org.wso2.carbon.identity.oauth2.bean;version="${identity.inbound.auth.oauth.imp.pkg.version}",
-                            org.wso2.carbon.identity.oauth2.client.authentication;version="${identity.inbound.auth.oauth.imp.pkg.version}",
-                            org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls,
-                            org.wso2.carbon.identity.oauth2.util;version="${identity.inbound.auth.oauth.imp.pkg.version}",
-                            org.wso2.carbon.identity.oauth.dcr;version="6.0.53",
-                            org.wso2.carbon.identity.oauth.dcr.exception;version="6.0.53",
-                            org.wso2.carbon.identity.oauth.dcr.bean;version="6.0.53",
-                            org.wso2.carbon.identity.oauth.dcr.service;version="6.0.53",
-                            org.apache.http.client.fluent;version="4.5.7",
-                            org.wso2.carbon.context;version="4.4.35"
-                        </Import-Package>
-                        <Export-Package>
-                            !org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.internal,
-                            org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.utils.*,
-                            org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.*,
-                        </Export-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-scr-plugin</artifactId>
-                <version>${maven.source.plugin.version}</version>
-            </plugin>
+            <!--<plugin>-->
+                <!--<groupId>org.apache.felix</groupId>-->
+                <!--<artifactId>maven-bundle-plugin</artifactId>-->
+                <!--<extensions>true</extensions>-->
+                <!--<configuration>-->
+                    <!--<instructions>-->
+                        <!--<Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>-->
+                        <!--<Bundle-Name>${project.artifactId}</Bundle-Name>-->
+                        <!--<Private-Package>org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.internal-->
+                        <!--</Private-Package>-->
+                        <!--<Import-Package>-->
+                            <!--javax.servlet.http;version="${javax.servlet.http.package.import.version.range}",-->
+                            <!--org.apache.commons.lang;version="${apache.commons.lang.package.import.version.range}",-->
+                            <!--org.apache.commons.logging;version="${apache.commons.logging.package.import.version.range}",-->
+                            <!--org.apache.oltu.oauth2.common;version="${apache.oltu.oauth2.common.package.import.version.range}",-->
+                            <!--org.osgi.framework;version="${osgi.framework.package.import.version.range}",-->
+                            <!--org.osgi.service.component;version="${osgi.service.component.package.import.version.range}",-->
+                            <!--org.wso2.carbon.identity.oauth.common;version="${identity.inbound.auth.oauth.imp.pkg.version}",-->
+                            <!--org.wso2.carbon.identity.oauth.common.exception;version="${identity.inbound.auth.oauth.imp.pkg.version}",-->
+                            <!--org.wso2.carbon.identity.oauth2;version="${identity.inbound.auth.oauth.imp.pkg.version}",-->
+                            <!--org.wso2.carbon.identity.oauth2.bean;version="${identity.inbound.auth.oauth.imp.pkg.version}",-->
+                            <!--org.wso2.carbon.identity.oauth2.client.authentication;version="${identity.inbound.auth.oauth.imp.pkg.version}",-->
+                            <!--org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls,-->
+                            <!--org.wso2.carbon.identity.oauth2.util;version="${identity.inbound.auth.oauth.imp.pkg.version}",-->
+                            <!--org.wso2.carbon.identity.oauth.dcr;version="6.0.53",-->
+                            <!--org.wso2.carbon.identity.oauth.dcr.exception;version="6.0.53",-->
+                            <!--org.wso2.carbon.identity.oauth.dcr.bean;version="6.0.53",-->
+                            <!--org.wso2.carbon.identity.oauth.dcr.service;version="6.0.53",-->
+                            <!--org.apache.http.client.fluent;version="4.5.7",-->
+                            <!--org.wso2.carbon.context;version="4.4.35"-->
+                        <!--</Import-Package>-->
+                        <!--<Export-Package>-->
+                            <!--!org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.internal,-->
+                            <!--org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.utils.*,-->
+                            <!--org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls.*,-->
+                        <!--</Export-Package>-->
+                    <!--</instructions>-->
+                <!--</configuration>-->
+            <!--</plugin>-->
+            <!--<plugin>-->
+                <!--<groupId>org.apache.felix</groupId>-->
+                <!--<artifactId>maven-scr-plugin</artifactId>-->
+                <!--<version>${maven.source.plugin.version}</version>-->
+            <!--</plugin>-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
