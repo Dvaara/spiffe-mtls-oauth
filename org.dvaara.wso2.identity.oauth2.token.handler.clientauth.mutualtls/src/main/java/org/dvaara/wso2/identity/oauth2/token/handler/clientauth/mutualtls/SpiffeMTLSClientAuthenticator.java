@@ -16,6 +16,7 @@ import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -33,6 +34,8 @@ import static org.dvaara.wso2.identity.oauth2.token.handler.clientauth.mutualtls
 public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthenticator {
 
     private static Log log = LogFactory.getLog(SpiffeMTLSClientAuthenticator.class);
+    public static final String SPIFFE_ID = "spiffe-id";
+
 
     /**
      * @param request                 HttpServletRequest which is the incoming request.
@@ -78,7 +81,7 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
 
     }
 
-    private String getClientID(X509Certificate requestCert) throws OAuthClientAuthnException {
+    private String getSpiffeID(X509Certificate requestCert) throws OAuthClientAuthnException {
 
         List<String> sanNames;
         //if this is getting called requestCert can't ever be null.
@@ -86,10 +89,7 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
         sanNames = getSubjectAlternativeNames(requestCert);
         sanNames.forEach(name -> log.info(format("SAN name in cert: %s", name)));
 
-        return sanNames.get(0).replace(".", "")
-                .replace("/", "")
-                .replace(":", "")
-                .replace("-", "_");
+        return sanNames.get(0);
     }
 
     /**
@@ -134,9 +134,17 @@ public class SpiffeMTLSClientAuthenticator extends AbstractOAuthClientAuthentica
             }
             throw new OAuthClientAuthnException("Error in building clientID from cert.", "BAD REQUEST");
         }
+
         logCertDetails(requestCert);
-        String clientID = getClientID(requestCert);
+        String spiffeID = getSpiffeID(requestCert);
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(SPIFFE_ID, spiffeID);
+        String clientID = spiffeID.replace(".", "")
+                .replace("/", "")
+                .replace(":", "")
+                .replace("-", "_");
         oAuthClientAuthnContext.setClientId(clientID);
+        oAuthClientAuthnContext.setProperties(properties);
         return clientID;
     }
 

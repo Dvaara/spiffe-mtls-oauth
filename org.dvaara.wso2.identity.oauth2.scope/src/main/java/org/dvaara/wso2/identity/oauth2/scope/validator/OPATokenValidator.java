@@ -54,6 +54,7 @@ public class OPATokenValidator extends DefaultOAuth2TokenValidator {
     @Override
     public boolean validateScope(OAuth2TokenValidationMessageContext messageContext) throws IdentityOAuth2Exception {
 
+        log.info("Inside OPATokenValidator.");
         AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty(ACCESS_TOKEN_DO);
         String clientID = null;
         OAuthAppDO app;
@@ -70,6 +71,8 @@ public class OPATokenValidator extends DefaultOAuth2TokenValidator {
             inputDictionary.put(OPAScopeUtils.APP_OWNER, appOwner);
             inputDictionary.put(OPAScopeUtils.RESOURCE, resource);
             inputDictionary.put(OPAScopeUtils.CLIENT_ID, clientID);
+
+            inputDictionary.entrySet().stream().forEach(entry -> System.out.println("Key:" + entry.getKey() +", Value: "+ entry.getValue()));
 
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +

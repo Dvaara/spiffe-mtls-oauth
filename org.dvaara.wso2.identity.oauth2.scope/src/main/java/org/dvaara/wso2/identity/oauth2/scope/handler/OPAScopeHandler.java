@@ -31,10 +31,12 @@ import static java.lang.String.format;
 public class OPAScopeHandler extends OAuth2ScopeHandler {
 
     private static Log log = LogFactory.getLog(OPAScopeHandler.class);
+    public static final String SPIFFE_ID = "spiffe-id";
 
     @Override
     public boolean validateScope(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {
 
+        log.info("Inside OPAScopeHandler");
         Set<String> clientRequestedScopes = Arrays.stream(tokReqMsgCtx.getScope()).collect(Collectors.toSet());
         if (log.isDebugEnabled()) {
             clientRequestedScopes.forEach((name) -> log.debug(format("Client requested scope: %s", name)));
@@ -62,13 +64,17 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
         }
 
         String clientID = requestDTO.getoAuthClientAuthnContext().getClientId();
+        String spiffeID = (String) requestDTO.getoAuthClientAuthnContext().getProperties().get(SPIFFE_ID);
         HttpRequestHeader[] requestHeaders = requestDTO.getHttpRequestHeaders();  //user-agent
         RequestParameter[] requestParams = requestDTO.getRequestParameters();
 
-        Arrays.stream(requestHeaders).forEach(requestHeader ->
-                System.out.println("Header:" + requestHeader.getName() +"+"+requestHeader.getValue()));
-        Arrays.stream(requestParams).forEach(requestParameter ->
-                System.out.println("Param:"+ requestParameter.getKey()+" Value"+ requestParameter.getValue()));
+        if(log.isDebugEnabled()){
+            Arrays.stream(requestHeaders).forEach(requestHeader ->
+                    log.debug("Header:" + requestHeader.getName() +"+"+requestHeader.getValue()[0]));
+            Arrays.stream(requestParams).forEach(requestParameter ->
+                    log.debug("Param:"+ requestParameter.getKey()+" Value"+ requestParameter.getValue()[0]));
+            log.debug(format("SPIFFE ID: %s , Client ID: %s", spiffeID, clientID));
+        }
 
         return Collections.emptySet();
     }
