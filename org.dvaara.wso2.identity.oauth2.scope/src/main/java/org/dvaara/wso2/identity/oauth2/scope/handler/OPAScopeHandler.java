@@ -1,23 +1,36 @@
 package org.dvaara.wso2.identity.oauth2.scope.handler;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.fluent.Request;
-import org.apache.http.entity.ContentType;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.dvaara.wso2.identity.oauth2.scope.utils.OPAScopeUtils;
+import org.json.JSONObject;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AccessTokenReqDTO;
 import org.wso2.carbon.identity.oauth2.model.HttpRequestHeader;
 import org.wso2.carbon.identity.oauth2.model.RequestParameter;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.validators.OAuth2ScopeHandler;
+import org.json.JSONObject;
+
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -42,7 +55,12 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
             clientRequestedScopes.forEach((name) -> log.debug(format("Client requested scope: %s", name)));
         }
 
-        Set<String> allowedScopes = getAllowedOPAScopes(tokReqMsgCtx);
+        Set<String> allowedScopes = null;
+        try {
+            allowedScopes = getAllowedOPAScopes(tokReqMsgCtx);
+        } catch (IOException e) {
+            throw new IdentityOAuth2Exception("Failed to get decision from OPA endpoint.", e);
+        }
         if (log.isDebugEnabled()) {
             clientRequestedScopes.forEach((name) -> log.debug(format("OPA allowed scope: %s", name)));
         }
@@ -55,7 +73,7 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
         return true;
     }
 
-    private Set<String> getAllowedOPAScopes(OAuthTokenReqMessageContext tokReqMsgCtx) {
+    private Set<String> getAllowedOPAScopes(OAuthTokenReqMessageContext tokReqMsgCtx) throws IOException {
         //By the time this method is called, clientID is validated.
         OAuth2AccessTokenReqDTO requestDTO = tokReqMsgCtx.getOauth2AccessTokenReqDTO();
 
@@ -68,25 +86,56 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
         HttpRequestHeader[] requestHeaders = requestDTO.getHttpRequestHeaders();  //user-agent
         RequestParameter[] requestParams = requestDTO.getRequestParameters();
 
+        Map<String,Object> inputDictionary = new HashMap<>();
+        inputDictionary.put(OPAScopeUtils.CLIENT_ID, clientID);
+        inputDictionary.put(OPAScopeUtils.SPIFFE_ID, spiffeID);
+        Arrays.stream(requestHeaders).forEach(header -> inputDictionary.put(header.getName(), header.getValue()));
+        Arrays.stream(requestParams).forEach(parameter -> inputDictionary.put(parameter.getKey(), parameter.getValue()));
+
+//        String json = new ObjectMapper().writeValueAsString(inputDictionary);
+        String json = new Gson().toJson(inputDictionary);
+
         if(log.isDebugEnabled()){
-            Arrays.stream(requestHeaders).forEach(requestHeader ->
-                    log.debug("Header:" + requestHeader.getName() +"+"+requestHeader.getValue()[0]));
-            Arrays.stream(requestParams).forEach(requestParameter ->
-                    log.debug("Param:"+ requestParameter.getKey()+" Value"+ requestParameter.getValue()[0]));
-            log.debug(format("SPIFFE ID: %s , Client ID: %s", spiffeID, clientID));
+            inputDictionary.entrySet().stream().forEach(entry -> log.debug("Key:" + entry.getKey() +", Value: "+ entry.getValue()));
         }
 
-        return Collections.emptySet();
+        return callOPA(spiffeID,json);
     }
 
-    private String callOPA(String query) throws IOException {
+    private Set<String> callOPA(String spiffeID, String query) throws IOException {
 
-        HttpResponse response =
-                Request.Post(getOPAServerURL())
-                        .bodyString(query, ContentType.APPLICATION_JSON)
-                        .execute().returnResponse();
-        String json = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-        return json;
+        Set<String> allowedSet = new HashSet<>();
+
+        String encodedSpiffeID = URLEncoder.encode(String.format("data.scopes[i].id = \"%s\"  data.scopes[i].scopes= response",spiffeID), "UTF-8");
+        log.debug(encodedSpiffeID);
+        DefaultHttpClient httpClient = new DefaultHttpClient();
+        HttpGet getRequest = new HttpGet("http://192.168.0.1:8181/v1/query?q="+ encodedSpiffeID);
+        HttpResponse httpResponse = httpClient.execute(getRequest);
+
+//        HttpResponse response = Request.Get("http://localhost:8181/v1/query?q="+encodedSpiffeID)
+//                .addHeader("Content-Type",ContentType.APPLICATION_FORM_URLENCODED.toString()).execute().returnResponse();
+        if(httpResponse.getStatusLine().getStatusCode() == 200) {
+            String json = EntityUtils.toString(httpResponse.getEntity(), StandardCharsets.UTF_8);
+            JsonParser parser = new JsonParser();
+            JsonElement jsonObject = parser.parse(json);
+            JsonArray allowedScopes = ((JsonObject) jsonObject).getAsJsonArray("result").get(0).getAsJsonObject().get("response").getAsJsonArray();
+            Gson gson = new Gson();
+            String[] output = gson.fromJson(allowedScopes , String[].class);
+
+            allowedSet = new HashSet<>(Arrays.asList(output));
+
+            log.info(String.format("Allowed set of scopes as per OPA : %s", allowedSet.toString()));
+        } else {
+            log.error("Error in getting decision from OPA. Returning zero scopes.");
+            allowedSet = Collections.emptySet();
+        }
+//                Request.Post(getOPAServerURL())
+//                        .bodyString(query, ContentType.APPLICATION_JSON)
+//                        .execute().returnResponse();
+//        String json = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+//        log.debug("Decision from OPA :" + json);
+
+        return allowedSet;
     }
 
     @Override

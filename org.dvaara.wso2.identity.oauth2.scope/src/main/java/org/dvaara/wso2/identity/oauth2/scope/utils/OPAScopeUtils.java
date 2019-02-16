@@ -16,5 +16,8 @@ public class OPAScopeUtils {
     public static final String APP_OWNER = "AppOwner";
     public static final String CLIENT_ID = "ClientID";
     public static final String SPIFFE_ID = "spiffe-id";
+    public static final String SCOPE = "Scope";
+    public static final String ISSUED_TIME = "Iat";
+    public static final String METHOD = "Method";
 
 }

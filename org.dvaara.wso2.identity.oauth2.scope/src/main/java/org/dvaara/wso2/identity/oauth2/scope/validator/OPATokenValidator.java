@@ -1,10 +1,22 @@
 package org.dvaara.wso2.identity.oauth2.scope.validator;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.fluent.Request;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.dvaara.wso2.identity.oauth2.scope.utils.OPAScopeUtils;
 import org.wso2.carbon.identity.oauth.common.exception.InvalidOAuthClientException;
@@ -23,7 +35,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
@@ -56,11 +70,14 @@ public class OPATokenValidator extends DefaultOAuth2TokenValidator {
 
         log.info("Inside OPATokenValidator.");
         AccessTokenDO accessTokenDO = (AccessTokenDO) messageContext.getProperty(ACCESS_TOKEN_DO);
+
         String clientID = null;
         OAuthAppDO app;
-        Map<String, String> inputDictionary = new HashMap<>();
+        Map<String, Object> inputDictionary = new HashMap<>();
+        Map<String, Object> inputDictionaryNested = new HashMap<>();
         String resource = null;
         String appOwner = null;
+        boolean decision = false;
         try {
             clientID = accessTokenDO.getConsumerKey();
             app = OAuth2Util.getAppInformationByClientId(clientID);
@@ -71,25 +88,83 @@ public class OPATokenValidator extends DefaultOAuth2TokenValidator {
             inputDictionary.put(OPAScopeUtils.APP_OWNER, appOwner);
             inputDictionary.put(OPAScopeUtils.RESOURCE, resource);
             inputDictionary.put(OPAScopeUtils.CLIENT_ID, clientID);
+            inputDictionary.put(OPAScopeUtils.SCOPE, accessTokenDO.getScope());
+            Arrays.stream(accessTokenDO.getScope()).forEach(scope -> log.info("DO scope :" + scope));
+            inputDictionary.put(OPAScopeUtils.ISSUED_TIME, String.valueOf(accessTokenDO.getIssuedTime()));
 
-            inputDictionary.entrySet().stream().forEach(entry -> System.out.println("Key:" + entry.getKey() +", Value: "+ entry.getValue()));
+            inputDictionaryNested.put("input", inputDictionary);
+
+            inputDictionary.entrySet().stream().forEach(entry -> log.info("Key:" + entry.getKey() +", Value: "+ entry.getValue()));
+            String json = new ObjectMapper().writeValueAsString(inputDictionaryNested);
+            log.info(json);
+            decision = callOPA(json);
 
         } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception(String.format("Exception occurred when getting app information for " +
                     "client id %s ", accessTokenDO.getConsumerKey()), e);
+        } catch (JsonProcessingException e) {
+            throw new IdentityOAuth2Exception("Error occurred in passing the input dictionary.");
+        } catch (IOException e) {
+            throw new IdentityOAuth2Exception("Error occurred calling the OPA engine. Not passing the request.");
         }
 
-        return true;
+        return decision;
     }
 
-    private String callOPA(String query) throws IOException {
+    private boolean callOPA(String json) throws IOException {
 
-        HttpResponse response =
-                Request.Post(OPA_SERVER_URL)
-                        .bodyString(query, ContentType.APPLICATION_JSON)
-                        .execute().returnResponse();
-        String json = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
-        return json;
+        DefaultHttpClient httpClient = new DefaultHttpClient();
+        String url = "http://192.168.0.1:8181/v1/data/httpapi/authz";
+
+        HttpPost post = new HttpPost(url);
+        StringEntity requestEntity = new StringEntity(
+                json,
+                "application/json",
+                "UTF-8");
+        post.setEntity(requestEntity);
+        post.setHeader("Content-Type", "application/x-www-form-urlencoded");
+        post.setHeader("Method", "POST");
+//            if (data.contains("token=")) {
+        post.setHeader("Resource", "/finance/salary");
+//            }
+        boolean response = makeCall(httpClient, post);
+        log.info("OPA decision:"+ response);
+
+//        HttpResponse response =
+//                Request.Post(OPA_SERVER_URL)
+//                        .bodyString(query, ContentType.APPLICATION_JSON)
+//                        .execute().returnResponse();
+//        String json = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+//        return json;
+        return response;
+    }
+
+    private static boolean makeCall(CloseableHttpClient httpClient, HttpPost post) {
+
+        try {
+            CloseableHttpResponse response = httpClient.execute(post);
+            HttpEntity entity = response.getEntity();
+
+            boolean isAllowed = false;
+            if(response.getStatusLine().getStatusCode() == 200) {
+                String json = EntityUtils.toString(response.getEntity(), StandardCharsets.UTF_8);
+                JsonParser parser = new JsonParser();
+                JsonElement jsonObject = parser.parse(json);
+                log.info(jsonObject.toString());
+                isAllowed = ((JsonObject) jsonObject).get("result").getAsJsonObject().get("allow").getAsBoolean();;
+
+//                allowedSet = new HashSet<>(Arrays.asList(output));
+
+//                log.info(String.format("Allowed set of scopes as per OPA : %s", allowedSet.toString()));
+            } else {
+                log.info("Error in getting decision from OPA. Returning zero scopes.");
+//                allowedSet = Collections.emptySet();
+            }
+            return isAllowed;
+        } catch (IOException var4) {
+            var4.printStackTrace();
+            return false;
+        }
     }
 
     /**
