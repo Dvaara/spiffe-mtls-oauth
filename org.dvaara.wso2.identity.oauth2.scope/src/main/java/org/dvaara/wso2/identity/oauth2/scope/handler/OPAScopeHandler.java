@@ -106,7 +106,7 @@ public class OPAScopeHandler extends OAuth2ScopeHandler {
 
         Set<String> allowedSet = new HashSet<>();
 
-        String encodedSpiffeID = URLEncoder.encode(String.format("data.scopes[i].id = \"%s\"  data.scopes[i].scopes= response",spiffeID), "UTF-8");
+        String encodedSpiffeID = URLEncoder.encode(String.format("data.dvaara.scopes[i].id=\"%s\"data.dvaara.scopes[i].scopes=response",spiffeID), "UTF-8");
         log.debug(encodedSpiffeID);
         DefaultHttpClient httpClient = new DefaultHttpClient();
         HttpGet getRequest = new HttpGet("http://192.168.0.1:8181/v1/query?q="+ encodedSpiffeID);
