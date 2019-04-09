@@ -6,7 +6,7 @@ subordinates = {"alice": [], "charlie": [], "bob": ["alice"], "betty": ["charlie
 import input as http_api
 # http_api = {
 #   "spiffe_id": "spiffe://example.org/front-end2",
-#   "path": ["finance", "salary", "alice"],
+#   "resource": ["finance", "salary", "alice"],
 #   "scope": clearance2,
 #   "user": "alice",
 #   "method": "GET"
@@ -32,7 +32,7 @@ allow {
 # Allow managers to get their subordinates' salaries.
 allow {
   http_api.method = "GET"
-  http_api.path = ["finance", "salary", username]
+  http_api.resource = ["finance", "salary", username]
   http_api.scope = "clearance2"
 }
 
@@ -40,7 +40,7 @@ allow {
 allow {
   http_api.method = "POST"
   subordinates[http_api.user][_] = username
-  http_api.path = ["finance", "salary", username]
+  http_api.resource = ["finance", "salary", username]
   http_api.remote_addr = "127.0.0.1"
   http_api.spiffe_id = "spiffe://example.org/workload-1"
 }
