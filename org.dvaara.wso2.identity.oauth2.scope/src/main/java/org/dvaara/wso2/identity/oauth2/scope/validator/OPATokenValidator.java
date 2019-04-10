@@ -122,10 +122,10 @@ public class OPATokenValidator extends DefaultOAuth2TokenValidator {
                 "application/json",
                 "UTF-8");
         post.setEntity(requestEntity);
-        post.setHeader("Content-Type", "application/x-www-form-urlencoded");
-        post.setHeader("Method", "POST");
+//        post.setHeader("Content-Type", "application/x-www-form-urlencoded");
+//        post.setHeader("Method", "POST");
 //            if (data.contains("token=")) {
-        post.setHeader("Resource", "/finance/salary");
+//        post.setHeader("Resource", "/finance/salary");
 //            }
         boolean response = makeCall(httpClient, post);
         log.info("OPA decision:"+ response);
